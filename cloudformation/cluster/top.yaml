@@ -1,0 +1,126 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: General use ECS Cluster
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: The id of the VPC the cluster will be in
+    ConstraintDescription: VPC Id must begin with 'vpc-'
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Comma seperated list of subnets for ECS instances to run in
+  Project:
+    Type: String
+    Description: Project used in naming in tagging to associate with cluster
+  Environment:
+    Type: String
+    Description: Environment used in naming and tagging to associate with cluster
+
+Resources:
+  EcsCluster:
+    Type: AWS::ECS::Cluster
+    Properties: 
+      ClusterName: !Sub "${Project}-${Environment}"
+
+  EcsInstanceRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Action:
+                - sts:AssumeRole
+              Principal:
+                Service:
+                  - ec2.amazonaws.com 
+              Effect: Allow
+              Sid: ''
+        Description: IAM role for instances in ECS cluster
+        ManagedPolicyArns: 
+          - "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
+        RoleName: !Sub "${Project}-ecs-role-${Environment}"
+        Tags: 
+          - Key: Environment
+            Value: !Ref Environment
+          - Key: Project
+            Value: !Ref Project
+        Path: /
+
+  EcsRoleInstaceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties: 
+      InstanceProfileName: !Sub "${Project}-ecs-instance-profile-${Environment}"
+      Path: /
+      Roles: 
+        - !Ref EcsInstanceRole
+
+  EcsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ECS Allowed Ports
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+      - IpProtocol: icmp
+        FromPort: '-1'
+        ToPort: '-1'
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: '0'
+        ToPort: '65535'
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: udp
+        FromPort: '0'
+        ToPort: '65535'
+        CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+      - IpProtocol: icmp
+        FromPort: '-1'
+        ToPort: '-1'
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: '0'
+        ToPort: '65535'
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: udp
+        FromPort: '0'
+        ToPort: '65535'
+        CidrIp: 0.0.0.0/0
+
+  EcsInstanceLc:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: ami-0f161e6034a6262d8
+      InstanceType: t2.micro
+      AssociatePublicIpAddress: true
+      IamInstanceProfile: !Ref EcsRoleInstaceProfile
+      KeyName: !Ref AWS::NoValue
+      SecurityGroups:
+      - !Ref EcsSecurityGroup
+      BlockDeviceMappings:
+      - DeviceName: /dev/xvdcz
+        Ebs:
+          VolumeSize: 22
+          VolumeType: gp2
+      UserData: !Base64
+                Fn::Sub: |
+                    #!/bin/bash
+                    echo ECS_CLUSTER=${EcsCluster} >> /etc/ecs/ecs.config;
+                    echo ECS_BACKEND_HOST= >> /etc/ecs/ecs.config;
+  EcsInstanceAsg:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    DependsOn: EcsCluster
+    Properties:
+        VPCZoneIdentifier: !Ref SubnetIds
+        LaunchConfigurationName: !Ref EcsInstanceLc
+        MinSize: 0
+        MaxSize: 1
+        DesiredCapacity: 1
+        Tags:
+        - Key: Name
+          Value: !Sub "${Project}-ECS-ASG-${Environment}"
+          PropagateAtLaunch: 'true'
+        - Key: Environment
+          Value: !Sub Environment
+          PropagateAtLaunch: 'true'
+        - Key: Project
+          Value: !Sub Project
+          PropagateAtLaunch: 'true'

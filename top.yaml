@@ -124,3 +124,11 @@ Resources:
         - Key: Project
           Value: !Sub Project
           PropagateAtLaunch: 'true'
+
+Outputs:
+  Cluster:
+    Description: Name of the EcsCluster
+    Value: !Ref EcsCluster
+  ClusterArn:
+    Description: Arn of the EcsCluster
+    Value: !GetAtt EcsCluster.Arn

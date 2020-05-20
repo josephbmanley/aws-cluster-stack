@@ -14,6 +14,9 @@ Parameters:
   Environment:
     Type: String
     Description: Environment used in naming and tagging to associate with cluster
+  LatestAmiId :
+    Type : 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id'
 
 Resources:
   EcsCluster:
@@ -88,7 +91,7 @@ Resources:
   EcsInstanceLc:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      ImageId: ami-0f7919c33c90f5b58
+      ImageId: !Ref LatestAmiId
       InstanceType: t2.micro
       AssociatePublicIpAddress: true
       IamInstanceProfile: !Ref EcsRoleInstaceProfile

@@ -88,7 +88,7 @@ Resources:
   EcsInstanceLc:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      ImageId: ami-0f161e6034a6262d8
+      ImageId: ami-0f7919c33c90f5b58
       InstanceType: t2.micro
       AssociatePublicIpAddress: true
       IamInstanceProfile: !Ref EcsRoleInstaceProfile

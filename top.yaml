@@ -17,6 +17,9 @@ Parameters:
   LatestAmiId :
     Type : 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
     Default: '/aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id'
+  InstanceType:
+    Type: String
+    Default: "t3.micro"
 
 Resources:
   EcsCluster:
@@ -92,7 +95,7 @@ Resources:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
       ImageId: !Ref LatestAmiId
-      InstanceType: t2.micro
+      InstanceType: !Ref InstanceType
       AssociatePublicIpAddress: true
       IamInstanceProfile: !Ref EcsRoleInstaceProfile
       KeyName: !Ref AWS::NoValue
